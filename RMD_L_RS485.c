@@ -4,9 +4,6 @@
 
 /* -------------------------- user define ----------------------------- */
 /* User private variables -------------------------------------- */
-// extern typedef struct RMD_Motordef;
-// extern typedef struct Motor_state;
-// extern typedef struct controller;
 
 UART_HandleTypeDef* RS_huart;
 GPIO_TypeDef* RS_EN_GPIO;
@@ -58,12 +55,12 @@ const uint8_t crctableL[] = {
 
 
 /* User private defined -------------------------------------- */
-#define RS485_TX_Mode delay_us(10);\
+#define RS485_TX_Mode delay_us(25);\
 HAL_GPIO_WritePin(RS_EN_GPIO, RS_EN_GPIO_PIN, GPIO_PIN_SET);\
-delay_us(10);
-#define RS485_RX_Mode delay_us(10);\
+delay_us(25);
+#define RS485_RX_Mode delay_us(25);\
 HAL_GPIO_WritePin(RS_EN_GPIO, RS_EN_GPIO_PIN, GPIO_PIN_RESET);\
-delay_us(10);
+delay_us(25);
 
 /* User private function prototypes -----------------------------------------------*/
 void RS_Init_Handle(UART_HandleTypeDef *huart, GPIO_TypeDef *EN_GPIO, uint16_t EN_GPIO_PIN, TIM_HandleTypeDef* timer){
@@ -91,7 +88,10 @@ uint16_t crc16table(uint8_t *ptr, uint16_t len)
 void sendCMD(RMD_Motordef* Motor, uint8_t CMD, uint8_t* Data){
   uint8_t TxData[13];
   TxData[0] = 0x3E;
-  TxData[1] = Motor->ID;
+  if (CMD == RMD_CMD_MultiMotorControl || CMD == RMD_CMD_SET_485ID)
+    TxData[1] = RMD_CMD_MultiMotorControl;
+  else
+    TxData[1] = Motor->ID;
   TxData[2] = 0x08;
   TxData[3] = CMD;
   memcpy(&TxData[4], Data, 7);
@@ -112,11 +112,11 @@ void ReceiveData(RMD_Motordef* Motor, uint8_t CMD){
   RS485_RX_Mode;
   // HAL_UART_Receive_DMA(RS_huart, RxData, 13);
   HAL_UART_Receive(RS_huart, RxData, 13, 10);
-  // for(int i =0; i<sizeof(RxData); i++){
-  //   printData("%x ", RxData[i]);
-  // }
-  // printData("\n");
-  if(RxData[0]==0x3e && RxData[1]==Motor->ID && RxData[2] == 8){
+  for(int i =0; i<sizeof(RxData); i++){
+    printData("%x ", RxData[i]);
+  }
+  printData("\n");
+  if(RxData[0]==0x3e && (RxData[1]==Motor->ID || CMD == RMD_CMD_MultiMotorControl || CMD == RMD_CMD_SET_485ID) && RxData[2] == 8){
     switch(CMD){
       case RMD_CMD_Read_PIDArg:
         Motor->PID.Cur_KP = (int8_t)RxData[5];
@@ -149,7 +149,7 @@ void ReceiveData(RMD_Motordef* Motor, uint8_t CMD){
         Motor->state.angle = ((RxData[10]<<24)|(RxData[9]<<16)|(RxData[8]<<8)|RxData[7])/16384.*360.;
         break;
       case RMD_CMD_Read_RawMultiEncoder:
-        Motor->state.angle = ((RxData[10]<<24)|(RxData[9]<<16)|(RxData[8]<<8)|RxData[7])/16384.*360.;
+        Motor->state.RawEncoder = ((RxData[10]<<24)|(RxData[9]<<16)|(RxData[8]<<8)|RxData[7]);
         break;
       case RMD_CMD_Read_MultiEncoder_ZeroShift:
         Motor->state.ZeroShift = (RxData[10]<<24)|(RxData[9]<<16)|(RxData[8]<<8)|RxData[7];
@@ -159,6 +159,17 @@ void ReceiveData(RMD_Motordef* Motor, uint8_t CMD){
         break;
       case RMD_CMD_SetZero_CurrentPos:
         Motor->state.ZeroShift = (RxData[10]<<24)|(RxData[9]<<16)|(RxData[8]<<8)|RxData[7];
+        break;
+      case RMD_CMD_Read_SingleEncoder:
+        Motor->state.angle = ((RxData[6]<<8)|RxData[5])/16384.*360.;
+        Motor->state.RawEncoder = ((RxData[8]<<8)|RxData[7]);
+        Motor->state.ZeroShift = (RxData[10]<<8)|(RxData[9]);
+        break;
+      case RMD_CMD_Read_MultiAngle:
+        Motor->state.angle = (float)((RxData[10]<<24)|(RxData[9]<<16)|(RxData[8]<<8)|RxData[7])/100.;
+        break;
+      case RMD_CMD_Read_SingleAngle:
+        Motor->state.angle = (float)((RxData[10]<<8)|(RxData[9]))/100.;
         break;
       case RMD_CMD_Read_State1:
         Motor->state.temperature = (int8_t)RxData[4];
@@ -202,7 +213,31 @@ void ReceiveData(RMD_Motordef* Motor, uint8_t CMD){
         Motor->state.speed = (float)((RxData[8]<<8)|RxData[7]);
         Motor->state.angle = (float)((RxData[10]<<8)|RxData[9])/16384.*360.;
         break;
-      
+      case RMD_CMD_AddAngle:
+        Motor->state.temperature = (int8_t)RxData[4];
+        Motor->state.current = (float)((RxData[6]<<8)|RxData[5])/100.;
+        Motor->state.speed = (float)((RxData[8]<<8)|RxData[7]);
+        Motor->state.angle = (float)((RxData[10]<<8)|RxData[9]);
+        break;
+      case RMD_CMD_GET_SystemRunMode:
+        Motor->RunMode = RxData[10];
+        break;
+      case RMD_CMD_GET_MotorPower:
+        Motor->state.MotorPower = (float)((RxData[10]<<8)|RxData[9])*0.1;
+        break;
+      case RMD_CMD_GET_SystemRunTime:
+        Motor->SystemRunTime = ((RxData[10]<<24)|(RxData[9]<<16)|(RxData[8]<<8)|RxData[7]);
+        break;
+      case RMD_CMD_GET_SystemVersion:
+        Motor->Version = (int)((RxData[10]<<24)|(RxData[9]<<16)|(RxData[8]<<8)|RxData[7]);
+        break;
+      case RMD_CMD_GET_MotorType:
+        for (int i = 0; i<7; i++)
+        Motor->Type[i] = (char)RxData[i+4];
+        break;
+      case RMD_CMD_SET_485ID:
+        printData("ID:%x\n", (RxData[10]<<8)||RxData[9]);
+        break;
       default:
         break;
     }
@@ -292,27 +327,52 @@ void RS_SetZero_CurPosition(RMD_Motordef* Motor)
   // ReceiveData(Motor, RMD_CMD_SetZero_CurrentPos);
   RS_SystemReset(Motor);
 }
+void RS_Read_SingleEncoder(RMD_Motordef* Motor)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(Motor, RMD_CMD_Read_SingleEncoder, Data);
+  ReceiveData(Motor, RMD_CMD_Read_SingleEncoder);
+}
+void RS_Read_MultiAngle(RMD_Motordef* Motor)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(Motor, RMD_CMD_Read_MultiAngle, Data);
+  ReceiveData(Motor, RMD_CMD_Read_MultiAngle);
+}
+void RS_Read_SingleAngle(RMD_Motordef* Motor)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(Motor, RMD_CMD_Read_SingleAngle, Data);
+  ReceiveData(Motor, RMD_CMD_Read_SingleAngle);
+}
 void RS_ReadState1(RMD_Motordef* Motor)
 {
   uint8_t Data[7] = {0};
   sendCMD(Motor, RMD_CMD_Read_State1, Data);
   ReceiveData(Motor, RMD_CMD_Read_State1);
 }
-
 void RS_ReadState2(RMD_Motordef* Motor)
 {
   uint8_t Data[7] = {0};
   sendCMD(Motor, RMD_CMD_Read_State2, Data);
   ReceiveData(Motor, RMD_CMD_Read_State2);
 }
-
 void RS_ReadState3(RMD_Motordef* Motor)
 {
   uint8_t Data[7] = {0};
   sendCMD(Motor, RMD_CMD_Read_State3, Data);
   ReceiveData(Motor, RMD_CMD_Read_State3);
 }
-
+void RS_CloseBLDC(RMD_Motordef* Motor)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(Motor, RMD_CMD_CloseMotor, Data);
+}
+void RS_StopBLDC(RMD_Motordef* Motor)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(Motor, RMD_CMD_StopMotor, Data);
+}
 void RS_TorqueControl(RMD_Motordef* Motor, int16_t iqControl)
 {
   uint8_t Data[7] = {0};
@@ -321,7 +381,6 @@ void RS_TorqueControl(RMD_Motordef* Motor, int16_t iqControl)
   sendCMD(Motor, RMD_CMD_Torque, Data);
   ReceiveData(Motor, RMD_CMD_Torque);
 }
-
 void RS_speedControl(RMD_Motordef* Motor, int32_t speedControl)
 {
   uint8_t Data[7] = {0};
@@ -332,7 +391,6 @@ void RS_speedControl(RMD_Motordef* Motor, int32_t speedControl)
   sendCMD(Motor, RMD_CMD_Speed, Data);
   ReceiveData(Motor, RMD_CMD_Speed);
 }
-
 void RS_ABSangleControl(RMD_Motordef* Motor, int32_t ref_angle, int16_t maxSpeed)
 {
   uint8_t Data[7] = {0};
@@ -345,7 +403,6 @@ void RS_ABSangleControl(RMD_Motordef* Motor, int32_t ref_angle, int16_t maxSpeed
   sendCMD(Motor, RMD_CMD_ABSAngle, Data);
   ReceiveData(Motor, RMD_CMD_ABSAngle);
 }
-
 void RS_SingleAngleControl(RMD_Motordef* Motor, int16_t ref_angle, int16_t maxSpeed)
 {
   uint8_t Data[7] = {0};
@@ -357,30 +414,112 @@ void RS_SingleAngleControl(RMD_Motordef* Motor, int16_t ref_angle, int16_t maxSp
   sendCMD(Motor, RMD_CMD_SingleAngle, Data);
   ReceiveData(Motor, RMD_CMD_SingleAngle);
 }
-void RS_CloseBLDC(RMD_Motordef* Motor)
+void RS_AddangleControl(RMD_Motordef* Motor, int32_t ref_angle, int16_t maxSpeed)
 {
   uint8_t Data[7] = {0};
-  sendCMD(Motor, RMD_CMD_CloseMotor, Data);
+  Data[1] = (uint8_t)(maxSpeed);
+  Data[2] = (uint8_t)(maxSpeed>>8);
+  Data[3] = (uint8_t)(ref_angle);
+  Data[4] = (uint8_t)(ref_angle>>8);
+  Data[5] = (uint8_t)(ref_angle>>16);
+  Data[6] = (uint8_t)(ref_angle>>24);
+  sendCMD(Motor, RMD_CMD_AddAngle, Data);
+  ReceiveData(Motor, RMD_CMD_AddAngle);
 }
-void RS_StopBLDC(RMD_Motordef* Motor)
+void RS_GET_SystemRunMode(RMD_Motordef* Motor)
 {
   uint8_t Data[7] = {0};
-  sendCMD(Motor, RMD_CMD_StopMotor, Data);
+  sendCMD(Motor, RMD_CMD_GET_SystemRunMode, Data);
+  ReceiveData(Motor, RMD_CMD_GET_SystemRunMode);
+}
+void RS_GET_MotorPower(RMD_Motordef* Motor)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(Motor, RMD_CMD_GET_MotorPower, Data);
+  ReceiveData(Motor, RMD_CMD_GET_MotorPower);
 }
 void RS_SystemReset(RMD_Motordef* Motor)
 {
   uint8_t Data[7] = {0};
   sendCMD(Motor, RMD_CMD_SystemReset, Data);
 }
+void RS_Brake_Release(RMD_Motordef* Motor)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(Motor, RMD_CMD_Brake_Release, Data);
+}
+void RS_Brake_Lock(RMD_Motordef* Motor)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(Motor, RMD_CMD_Brake_Lock, Data);
+}
+void RS_GET_SystemRunTime(RMD_Motordef* Motor)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(Motor, RMD_CMD_GET_SystemRunTime, Data);
+  ReceiveData(Motor, RMD_CMD_GET_SystemRunTime);
+}
+void RS_GET_SystemVersion(RMD_Motordef* Motor)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(Motor, RMD_CMD_GET_SystemVersion, Data);
+  ReceiveData(Motor, RMD_CMD_GET_SystemVersion);
+}
+void RS_SET_CommuProtectTime(RMD_Motordef* Motor, int32_t ProtectTime_MS)
+{
+  uint8_t Data[7] = {0};
+  Data[3] = (uint8_t)(ProtectTime_MS);
+  Data[4] = (uint8_t)(ProtectTime_MS>>8);
+  Data[5] = (uint8_t)(ProtectTime_MS>>16);
+  Data[6] = (uint8_t)(ProtectTime_MS>>24);
+  sendCMD(Motor, RMD_CMD_SET_CommuProtectTime, Data);
+}
+void RS_SET_BaudRate(RMD_Motordef* Motor, uint8_t Baudrate)
+{
+  /* Baud Rate ----------------------
+    - 0x00: 115200
+    - 0x01: 500k
+    - 0x02: 1M
+    - 0x03: 1.5M
+    - 0x04: 2.5M
+  -------------------------------- */
+  uint8_t Data[7] = {0};
+  Data[6] = (uint8_t)(Baudrate);
+  sendCMD(Motor, RMD_CMD_SET_BaudRate, Data);
+}
+void RS_GET_MotorType(RMD_Motordef* Motor)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(Motor, RMD_CMD_GET_MotorType, Data);
+  ReceiveData(Motor, RMD_CMD_GET_MotorType);
+}
+void RS_Function(RMD_Motordef* Motor, uint8_t index, uint32_t value)
+{
+  uint8_t Data[7] = {0};
+  Data[0] = index;
+  Data[3] = (uint8_t)(value);
+  Data[4] = (uint8_t)(value>>8);
+  Data[5] = (uint8_t)(value>>16);
+  Data[6] = (uint8_t)(value>>24);
+  sendCMD(Motor, RMD_CMD_Function, Data);
+  ReceiveData(Motor, RMD_CMD_Function);
+}
+void RS_MultiMotorControl(uint8_t CMD)
+{
+  uint8_t Data[7] = {0};
+  sendCMD(0, CMD, Data);
+}
+void RS_SET_485ID(RMD_Motordef* Motor, uint8_t RW_Flag, uint8_t ID)
+{
+  uint8_t Data[7] = {0};
+  Data[1] = RW_Flag; // 1:Read, 0:Write
+  Data[6] = ID;
+  sendCMD(0, RMD_CMD_SET_485ID, Data);
+  printData("num:%d", sizeof(Motor)/sizeof(RMD_Motordef));
+  ReceiveData(0, RMD_CMD_SET_485ID);
+}
 void delay_us(uint16_t us)
 {
  __HAL_TIM_SET_COUNTER(RS_timer, 0); // set the counter value a 0
  while (__HAL_TIM_GET_COUNTER(RS_timer) < us); // wait for the counter to reach the us input in the parameter
 }
-
-
-// void RS_send_cmd(uint8_t *Txdata, uint8_t len){
-//   RS485_TX_Mode;
-//   HAL_Delay(2);
-//   HAL_UART_Transmit(huart, TxData, len, 10);
-// }
