@@ -1,0 +1,17 @@
+*** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
+Build target 'test_RS485'
+compiling main.c...
+../Core/Src/main.c(80): warning:  #223-D: function "strlen" declared implicitly
+    HAL_UART_Transmit(&huart3, (uint8_t *)str, strlen(str), 100);
+../Core/Src/main.c(153): warning:  #68-D: integer conversion resulted in a change of sign
+    RS_Write_PID_RAM(&Motor[0], 100, 5, 200, 5, 100, 5);
+../Core/Src/main.c(156): warning:  #177-D: variable "pre_angle"  was declared but never referenced
+    int32_t pre_angle = 0; 
+../Core/Src/main.c(157): warning:  #177-D: variable "sgn"  was declared but never referenced
+    int sgn = 1; 
+../Core/Src/main.c: 4 warnings, 0 errors
+linking...
+Program Size: Code=22038 RO-data=1818 RW-data=204 ZI-data=2036  
+FromELF: creating hex file...
+"test_RS485\test_RS485.axf" - 0 Error(s), 4 Warning(s).
+Build Time Elapsed:  00:00:02
