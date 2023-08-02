@@ -54,12 +54,10 @@ const uint8_t crctableL[] = {
 
 
 /* User private defined -------------------------------------- */
-uint16_t RS485_delay_time_us = 25;
-#define RS485_TX_Mode delay_us(RS485_delay_time_us);\
-HAL_GPIO_WritePin(RS_EN_GPIO, RS_EN_GPIO_PIN, GPIO_PIN_SET);\
+uint16_t RS485_delay_time_us = 100;
+#define RS485_TX_Mode HAL_GPIO_WritePin(RS_EN_GPIO, RS_EN_GPIO_PIN, GPIO_PIN_SET);\
 delay_us(RS485_delay_time_us);
-#define RS485_RX_Mode delay_us(RS485_delay_time_us);\
-HAL_GPIO_WritePin(RS_EN_GPIO, RS_EN_GPIO_PIN, GPIO_PIN_RESET);\
+#define RS485_RX_Mode HAL_GPIO_WritePin(RS_EN_GPIO, RS_EN_GPIO_PIN, GPIO_PIN_RESET);\
 delay_us(RS485_delay_time_us);
 
 
@@ -349,6 +347,7 @@ void RS_SetZero_MultiEncoderVal(RMD_Motordef* Motor, uint32_t EncoderZeroShift)
   Data[6] = (uint8_t)(EncoderZeroShift>>24);
   sendCMD(Motor, RMD_CMD_SetZero_MultiEncoderVal, Data);
   // ReceiveData(Motor, RMD_CMD_SetZero_CurrentPos);
+  HAL_Delay(1);
   RS_SystemReset(Motor);
 }
 void RS_SetZero_CurPosition(RMD_Motordef* Motor)
@@ -422,15 +421,16 @@ void RS_speedControl(RMD_Motordef* Motor, int32_t speedControl)
   sendCMD(Motor, RMD_CMD_Speed, Data);
   ReceiveData(Motor, RMD_CMD_Speed);
 }
-void RS_ABSangleControl(RMD_Motordef* Motor, int32_t ref_angle, int16_t maxSpeed)
+void RS_ABSangleControl(RMD_Motordef* Motor, float ref_angle, int16_t maxSpeed)
 {
   uint8_t Data[7] = {0};
+  int32_t angleCMD = (int32_t)(ref_angle*100.)+0.5;
   Data[1] = (uint8_t)(maxSpeed);
   Data[2] = (uint8_t)(maxSpeed>>8);
-  Data[3] = (uint8_t)(ref_angle);
-  Data[4] = (uint8_t)(ref_angle>>8);
-  Data[5] = (uint8_t)(ref_angle>>16);
-  Data[6] = (uint8_t)(ref_angle>>24);
+  Data[3] = (uint8_t)(angleCMD);
+  Data[4] = (uint8_t)(angleCMD>>8);
+  Data[5] = (uint8_t)(angleCMD>>16);
+  Data[6] = (uint8_t)(angleCMD>>24);
   sendCMD(Motor, RMD_CMD_ABSAngle, Data);
   ReceiveData(Motor, RMD_CMD_ABSAngle);
 }
@@ -505,7 +505,7 @@ void RS_SET_CommuProtectTime(RMD_Motordef* Motor, int32_t ProtectTime_MS)
   Data[6] = (uint8_t)(ProtectTime_MS>>24);
   sendCMD(Motor, RMD_CMD_SET_CommuProtectTime, Data);
 }
-void RS_SET_BaudRate(RMD_Motordef* Motor, uint8_t Baudrate)
+void RS_SET_BaudRate(RMD_Motordef* Motor, RMDL_BaudRate Baudrate)
 {
   /* Baud Rate ----------------------
     - 0x00: 115200

@@ -44,7 +44,13 @@ typedef struct {
         0x2000 Error Encoder abjust
     ----------------------*/
 } Motor_state;
-
+typedef enum {
+    RMDL_BR_115200 = 0,
+    RMDL_BR_500K = 1,
+    RMDL_BR_1M = 2,
+    RMDL_BR_1_5M = 3,
+    RMDL_BR_2_5M = 4,
+} RMDL_BaudRate;
 typedef struct {
     uint8_t ID;
     // Controller
@@ -134,7 +140,7 @@ void RS_StopBLDC(RMD_Motordef* Motor);
 
 void RS_TorqueControl(RMD_Motordef* Motor, int16_t iqControl);
 void RS_speedControl(RMD_Motordef* Motor, int32_t speedControl);
-void RS_ABSangleControl(RMD_Motordef* Motor, int32_t ref_angle, int16_t maxSpeed);
+void RS_ABSangleControl(RMD_Motordef* Motor, float ref_angle, int16_t maxSpeed);
 void RS_SingleAngleControl(RMD_Motordef* Motor, int16_t ref_angle, int16_t maxSpeed);
 void RS_AddangleControl(RMD_Motordef* Motor, int32_t ref_angle, int16_t maxSpeed);
 
@@ -147,7 +153,7 @@ void RS_Brake_Lock(RMD_Motordef* Motor);
 void RS_GET_SystemRunTime(RMD_Motordef* Motor);
 void RS_GET_SystemVersion(RMD_Motordef* Motor);
 void RS_SET_CommuProtectTime(RMD_Motordef* Motor, int32_t ProtectTime_MS);
-void RS_SET_BaudRate(RMD_Motordef* Motor, uint8_t Baudrate);
+void RS_SET_BaudRate(RMD_Motordef* Motor, RMDL_BaudRate Baudrate);
 void RS_GET_MotorType(RMD_Motordef* Motor);
 void RS_Function(RMD_Motordef* Motor, uint8_t index, uint32_t value);
 void RS_MultiMotorControl(RMD_Motordef* Motor, uint8_t CMD, int MotorTotalNum);
