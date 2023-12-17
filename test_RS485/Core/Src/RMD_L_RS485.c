@@ -114,7 +114,7 @@ void ReceiveData(RMD_Motordef* Motor, uint8_t CMD){
   uint8_t Data[8];
   RS485_RX_Mode;
   // HAL_UART_Receive_DMA(RS_huart, RxData, 13);
-  HAL_UART_Receive(RS_huart, RxData, 13, 5);
+  HAL_UART_Receive(RS_huart, RxData, 13, 10);
   
   // for(int i =0; i<sizeof(RxData); i++){
   //   printData("%x ", RxData[i]);
@@ -125,7 +125,7 @@ void ReceiveData(RMD_Motordef* Motor, uint8_t CMD){
     DecodeData(Motor, Data);
   }
   else 
-    printData("Error receive occur in CMD: %x \n", CMD);
+    printData("Error receive occur in Motor ID: %d, CMD: %x \n", Motor->ID, CMD);
 }
 void ReceiveMultiData(RMD_Motordef* Motor, uint8_t CMD, int MotorTotalNum){
   uint8_t RxData[13*MotorTotalNum];
@@ -209,50 +209,50 @@ void DecodeData(RMD_Motordef* Motor, uint8_t* Data){
       case RMD_CMD_Read_State1:
         Motor->state.temperature = (int8_t)Data[1];
         Motor->state.Brake = Data[3];
-        Motor->state.voltage = (float)((Data[5]<<8)|Data[4])*0.1;
+        Motor->state.voltage = (float)((int8_t)Data[5]<<8|(int8_t)Data[4])*0.1;
         Motor->state.ErrorState = (Data[7]<<8)|Data[6];
         break;
       case RMD_CMD_Read_State2:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6]);
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6]);
         break;
       case RMD_CMD_Read_State3:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.A_Phase_cur = (float)((Data[3]<<8)|Data[2])*0.01;
-        Motor->state.B_Phase_cur = (float)((Data[5]<<8)|Data[4])*0.01;
-        Motor->state.C_Phase_cur = (float)((Data[7]<<8)|Data[6])*0.01;
+        Motor->state.A_Phase_cur = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.B_Phase_cur = (float)((int8_t)Data[5]<<8|(int8_t)Data[4])*0.01;
+        Motor->state.C_Phase_cur = (float)((int8_t)Data[7]<<8|(int8_t)Data[6])*0.01;
         break;
       case RMD_CMD_Torque:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6]);
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6]);
         break;
       case RMD_CMD_Speed:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6]);
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6]);
         break;
       case RMD_CMD_ABSAngle:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6]);
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6]);
         break;
       case RMD_CMD_SingleAngle: // Weird
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6])/16384.*360.;
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6])/16384.*360.;
         break;
       case RMD_CMD_AddAngle:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6]);
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6]);
         break;
       case RMD_CMD_GET_SystemRunMode:
         Motor->RunMode = Data[7];
@@ -292,7 +292,7 @@ void RS_Write_PID_RAM(RMD_Motordef* Motor, int8_t Cur_P, int8_t Cur_I, int8_t Ve
   Data[5] = (uint8_t)Pos_P;
   Data[6] = (uint8_t)Pos_I;
   sendCMD(Motor, RMD_CMD_Write_PIDRAM, Data);
-  // ReceiveData(Motor, RMD_CMD_Write_PIDRAM);
+  ReceiveData(Motor, RMD_CMD_Write_PIDRAM);
 }
 void RS_Write_PID_ROM(RMD_Motordef* Motor, int8_t Cur_P, int8_t Cur_I, int8_t Vel_P, int8_t Vel_I, int8_t Pos_P, int8_t Pos_I)
 {
@@ -304,7 +304,7 @@ void RS_Write_PID_ROM(RMD_Motordef* Motor, int8_t Cur_P, int8_t Cur_I, int8_t Ve
   Data[5] = (uint8_t)Pos_P;
   Data[6] = (uint8_t)Pos_I;
   sendCMD(Motor, RMD_CMD_Write_PIDROM, Data);
-  // ReceiveData(Motor, RMD_CMD_Write_PIDROM);
+  ReceiveData(Motor, RMD_CMD_Write_PIDROM);
 }
 void RS_Read_ACC(RMD_Motordef* Motor)
 {
@@ -349,6 +349,7 @@ void RS_SetZero_MultiEncoderVal(RMD_Motordef* Motor, uint32_t EncoderZeroShift)
   Data[6] = (uint8_t)(EncoderZeroShift>>24);
   sendCMD(Motor, RMD_CMD_SetZero_MultiEncoderVal, Data);
   // ReceiveData(Motor, RMD_CMD_SetZero_CurrentPos);
+  HAL_Delay(1);
   RS_SystemReset(Motor);
 }
 void RS_SetZero_CurPosition(RMD_Motordef* Motor)
@@ -422,15 +423,16 @@ void RS_speedControl(RMD_Motordef* Motor, int32_t speedControl)
   sendCMD(Motor, RMD_CMD_Speed, Data);
   ReceiveData(Motor, RMD_CMD_Speed);
 }
-void RS_ABSangleControl(RMD_Motordef* Motor, int32_t ref_angle, int16_t maxSpeed)
+void RS_ABSangleControl(RMD_Motordef* Motor, float ref_angle, int16_t maxSpeed)
 {
   uint8_t Data[7] = {0};
+  int32_t angleCMD = (int32_t)(ref_angle*100.)+0.5;
   Data[1] = (uint8_t)(maxSpeed);
   Data[2] = (uint8_t)(maxSpeed>>8);
-  Data[3] = (uint8_t)(ref_angle);
-  Data[4] = (uint8_t)(ref_angle>>8);
-  Data[5] = (uint8_t)(ref_angle>>16);
-  Data[6] = (uint8_t)(ref_angle>>24);
+  Data[3] = (uint8_t)(angleCMD);
+  Data[4] = (uint8_t)(angleCMD>>8);
+  Data[5] = (uint8_t)(angleCMD>>16);
+  Data[6] = (uint8_t)(angleCMD>>24);
   sendCMD(Motor, RMD_CMD_ABSAngle, Data);
   ReceiveData(Motor, RMD_CMD_ABSAngle);
 }
@@ -505,7 +507,7 @@ void RS_SET_CommuProtectTime(RMD_Motordef* Motor, int32_t ProtectTime_MS)
   Data[6] = (uint8_t)(ProtectTime_MS>>24);
   sendCMD(Motor, RMD_CMD_SET_CommuProtectTime, Data);
 }
-void RS_SET_BaudRate(RMD_Motordef* Motor, uint8_t Baudrate)
+void RS_SET_BaudRate(RMD_Motordef* Motor, RMDL_BaudRate Baudrate)
 {
   /* Baud Rate ----------------------
     - 0x00: 115200

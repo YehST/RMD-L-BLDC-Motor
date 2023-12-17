@@ -54,10 +54,12 @@ const uint8_t crctableL[] = {
 
 
 /* User private defined -------------------------------------- */
-uint16_t RS485_delay_time_us = 100;
-#define RS485_TX_Mode HAL_GPIO_WritePin(RS_EN_GPIO, RS_EN_GPIO_PIN, GPIO_PIN_SET);\
+uint16_t RS485_delay_time_us = 25;
+#define RS485_TX_Mode delay_us(RS485_delay_time_us);\
+HAL_GPIO_WritePin(RS_EN_GPIO, RS_EN_GPIO_PIN, GPIO_PIN_SET);\
 delay_us(RS485_delay_time_us);
-#define RS485_RX_Mode HAL_GPIO_WritePin(RS_EN_GPIO, RS_EN_GPIO_PIN, GPIO_PIN_RESET);\
+#define RS485_RX_Mode delay_us(RS485_delay_time_us);\
+HAL_GPIO_WritePin(RS_EN_GPIO, RS_EN_GPIO_PIN, GPIO_PIN_RESET);\
 delay_us(RS485_delay_time_us);
 
 
@@ -112,7 +114,7 @@ void ReceiveData(RMD_Motordef* Motor, uint8_t CMD){
   uint8_t Data[8];
   RS485_RX_Mode;
   // HAL_UART_Receive_DMA(RS_huart, RxData, 13);
-  HAL_UART_Receive(RS_huart, RxData, 13, 5);
+  HAL_UART_Receive(RS_huart, RxData, 13, 10);
   
   // for(int i =0; i<sizeof(RxData); i++){
   //   printData("%x ", RxData[i]);
@@ -123,7 +125,7 @@ void ReceiveData(RMD_Motordef* Motor, uint8_t CMD){
     DecodeData(Motor, Data);
   }
   else 
-    printData("Error receive occur in CMD: %x \n", CMD);
+    printData("Error receive occur in Motor ID: %d, CMD: %x \n", Motor->ID, CMD);
 }
 void ReceiveMultiData(RMD_Motordef* Motor, uint8_t CMD, int MotorTotalNum){
   uint8_t RxData[13*MotorTotalNum];
@@ -207,50 +209,50 @@ void DecodeData(RMD_Motordef* Motor, uint8_t* Data){
       case RMD_CMD_Read_State1:
         Motor->state.temperature = (int8_t)Data[1];
         Motor->state.Brake = Data[3];
-        Motor->state.voltage = (float)((Data[5]<<8)|Data[4])*0.1;
+        Motor->state.voltage = (float)((int8_t)Data[5]<<8|(int8_t)Data[4])*0.1;
         Motor->state.ErrorState = (Data[7]<<8)|Data[6];
         break;
       case RMD_CMD_Read_State2:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6]);
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6]);
         break;
       case RMD_CMD_Read_State3:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.A_Phase_cur = (float)((Data[3]<<8)|Data[2])*0.01;
-        Motor->state.B_Phase_cur = (float)((Data[5]<<8)|Data[4])*0.01;
-        Motor->state.C_Phase_cur = (float)((Data[7]<<8)|Data[6])*0.01;
+        Motor->state.A_Phase_cur = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.B_Phase_cur = (float)((int8_t)Data[5]<<8|(int8_t)Data[4])*0.01;
+        Motor->state.C_Phase_cur = (float)((int8_t)Data[7]<<8|(int8_t)Data[6])*0.01;
         break;
       case RMD_CMD_Torque:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6]);
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6]);
         break;
       case RMD_CMD_Speed:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6]);
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6]);
         break;
       case RMD_CMD_ABSAngle:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6]);
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6]);
         break;
       case RMD_CMD_SingleAngle: // Weird
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6])/16384.*360.;
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6])/16384.*360.;
         break;
       case RMD_CMD_AddAngle:
         Motor->state.temperature = (int8_t)Data[1];
-        Motor->state.current = (float)((Data[3]<<8)|Data[2])/100.;
-        Motor->state.speed = (float)((Data[5]<<8)|Data[4]);
-        Motor->state.angle = (float)((Data[7]<<8)|Data[6]);
+        Motor->state.current = (float)((int8_t)Data[3]<<8|(int8_t)Data[2])*0.01;
+        Motor->state.speed = (float)((int8_t)Data[5]<<8|(int8_t)Data[4]);
+        Motor->state.angle = (float)((int8_t)Data[7]<<8|(int8_t)Data[6]);
         break;
       case RMD_CMD_GET_SystemRunMode:
         Motor->RunMode = Data[7];
@@ -290,7 +292,7 @@ void RS_Write_PID_RAM(RMD_Motordef* Motor, int8_t Cur_P, int8_t Cur_I, int8_t Ve
   Data[5] = (uint8_t)Pos_P;
   Data[6] = (uint8_t)Pos_I;
   sendCMD(Motor, RMD_CMD_Write_PIDRAM, Data);
-  // ReceiveData(Motor, RMD_CMD_Write_PIDRAM);
+  ReceiveData(Motor, RMD_CMD_Write_PIDRAM);
 }
 void RS_Write_PID_ROM(RMD_Motordef* Motor, int8_t Cur_P, int8_t Cur_I, int8_t Vel_P, int8_t Vel_I, int8_t Pos_P, int8_t Pos_I)
 {
@@ -302,7 +304,7 @@ void RS_Write_PID_ROM(RMD_Motordef* Motor, int8_t Cur_P, int8_t Cur_I, int8_t Ve
   Data[5] = (uint8_t)Pos_P;
   Data[6] = (uint8_t)Pos_I;
   sendCMD(Motor, RMD_CMD_Write_PIDROM, Data);
-  // ReceiveData(Motor, RMD_CMD_Write_PIDROM);
+  ReceiveData(Motor, RMD_CMD_Write_PIDROM);
 }
 void RS_Read_ACC(RMD_Motordef* Motor)
 {
