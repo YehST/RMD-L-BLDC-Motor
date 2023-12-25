@@ -1,4 +1,4 @@
-# RMD_L_RS485函式庫使用說明
+# RMD_L_RS485 Communicate Library for stm32
 
 ## Abstract
 - This library is based on the communication datasheet provided by Myactuator and is compatible with the firmware version 2023/02 of the RMD-L series brushless motors. The communication protocol used is RS-485.
@@ -36,8 +36,9 @@
     The data obtained from the motor response will be directly stored in the motor structure provided as an argument. You can retrieve the data by calling the appropriate functions when needed.
 
 - NOTICE:
-  1. When using multiple motors, it is necessary to introduce delays or implement timing control using an RTOS (Real-Time Operating System) to ensure proper sequencing between the motors. Here are the key points to consider:
+  1. When using multiple motors, it is necessary to add delays between motors or implement timing control using an RTOS (Real-Time Operating System) to ensure proper sequencing.
   2. If you encounter issues with data transmission, check whether the baud rate settings of the motors and the board are the same. If they are the same, you can increase the value of "RS485_delay_time_us" in the library.
+  3. If the compiler say " printData is not defined. ", don't worry, It just used to print something, like printf(), just comment it.
 
 ## Example
 - In this example, the communication pins are configured using STM32 CubeMX. Two UART interfaces are set up for communication with the motors and the PC, respectively. A timer is used for RS485 communication delay, and a GPIO pin is used for switching the MAX485 mode. The pin configuration is as follows:
